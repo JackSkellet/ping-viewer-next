@@ -212,7 +212,9 @@ pub async fn blueos_ping_discovery() -> Option<BluePingDiscoveryResult> {
     {
         Ok(response) => response,
         Err(err) => {
-            warn!("blue_ping_discovery: Failed to connect to Ping service at {sensors_url}: {err}");
+            warn!(
+                "blueos_ping_discovery: Failed to connect to Ping service at {sensors_url}: {err}"
+            );
             return None;
         }
     };
@@ -220,12 +222,12 @@ pub async fn blueos_ping_discovery() -> Option<BluePingDiscoveryResult> {
     let devices: Vec<PingDevice> = match response.json().await {
         Ok(devices) => devices,
         Err(err) => {
-            warn!("blue_ping_discovery: Failed to parse response: {err}");
+            warn!("blueos_ping_discovery: Failed to parse response: {err}");
             return None;
         }
     };
 
-    debug!("blue_ping_discovery: Found devices: {devices:?}");
+    debug!("blueos_ping_discovery: Found devices: {devices:?}");
 
     let mut available_sources = Vec::new();
     let mut used_ports = Vec::new();
