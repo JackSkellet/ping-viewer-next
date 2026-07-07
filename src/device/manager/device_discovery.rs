@@ -192,7 +192,8 @@ fn resolve_blueos_host(env_val: Option<&str>) -> &str {
 /// otherwise falls back to the standard BlueOS IP `192.168.2.2`.
 #[cfg(feature = "blueos-extension")]
 fn blueos_host() -> String {
-    resolve_blueos_host(std::env::var("BLUEOS_HOST").ok().as_deref()).to_string()
+    let env_val = std::env::var("BLUEOS_HOST");
+    resolve_blueos_host(env_val.as_deref().ok()).to_string()
 }
 
 // Discovery function that uses BlueOS's ping service to find current bridged devices
@@ -211,9 +212,7 @@ pub async fn blueos_ping_discovery() -> Option<BluePingDiscoveryResult> {
     {
         Ok(response) => response,
         Err(err) => {
-            warn!(
-                "blueos_ping_discovery: Failed to connect to Ping service at {sensors_url}: {err}"
-            );
+            warn!("blue_ping_discovery: Failed to connect to Ping service at {sensors_url}: {err}");
             return None;
         }
     };
