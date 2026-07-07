@@ -1,49 +1,371 @@
-name: Publish Docker image
+name: Test all targets
 
-on:
-  push:
-    branches: [ master ]
-    tags: [ "v*" ]
-  workflow_dispatch:
+on: [push, pull_request]
+
+env:
+  BLUEOS_EXTENSION_BRANCH: Ping-Viewer-Next_Discovery-Tweak
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  docker:
-    runs-on: ubuntu-latest
+  quick-tests:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Install build dependencies
+        # Note: Dependencies after git are related to Tauri
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        with:
+          packages: |
+            curl
+            git
+            libwebkit2gtk-4.0-dev
+            libwebkit2gtk-4.1-dev
+            libappindicator3-dev
+            librsvg2-dev
+            patchelf
 
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set directory to safe for git
+        # Note: Required by vergen (https://crates.io/crates/vergen)
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+      - name: Install build dependencies - Rustup
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install build dependencies - Bun
+        uses: oven-sh/setup-bun@v2.0.1
+        with:
+          bun-version: 1.1.30
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      - name: Check style
+        run: cargo fmt --check
+
+      - name: Check clippy
+        run: cargo clippy --all-features
+
+      - name: Build
+        run: cargo build --verbose --locked
+
+  build-frontend:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: ping-viewer-next-frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          bun-version: 1.1.22
 
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: jackskellet/ping-viewer-next_discovery-tweak
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
+      - name: Format check
+        run: bunx biome format
+
+      - name: Lint check
+        run: bunx biome lint
+
+      - name: Build project
+        run: bun run build
+
+      - name: Upload dist folder
+        uses: actions/upload-artifact@v4
         with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          name: dist
+          path: ping-viewer-next-frontend/dist
+
+  build:
+    needs: [quick-tests, build-frontend]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            TARGET: aarch64-apple-darwin
+
+          - os: macos-14
+            TARGET: x86_64-apple-darwin
+
+          - os: ubuntu-22.04
+            TARGET: aarch64-unknown-linux-musl
+
+          - os: ubuntu-22.04
+            TARGET: armv7-unknown-linux-musleabihf
+
+          - os: ubuntu-22.04
+            TARGET: x86_64-unknown-linux-gnu
+
+          - os: windows-2022
+            TARGET: x86_64-pc-windows-msvc
+            EXTENSION: .exe
+
+    steps:
+      - name: Building ${{ matrix.TARGET }}
+        run: echo "${{ matrix.TARGET }}"
+
+      - uses: actions/checkout@master
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ./ping-viewer-next-frontend/dist
+
+      - name: Build
+        uses: houseabsolute/actions-rust-cross@v0.0.14
+        with:
+          target: ${{ matrix.TARGET }}
+          args: "--release --locked --features 'embed-frontend blueos-extension'"
+
+      - name: Rename
+        run: cp target/${{ matrix.TARGET }}/release/${{ github.event.repository.name }}${{ matrix.EXTENSION }} ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          path: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+
+      - uses: svenstaro/upload-release-action@v2
+        name: Upload binaries to release
+        if: ${{ github.event_name == 'push' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          asset_name: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          tag: ${{ github.ref }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          overwrite: true
+
+  # Workaround while we don't fix current issue.
+  # Issue: https://github.com/bluerobotics/ping-viewer-next/issues/65
+  build-x86-musl:
+    needs: [quick-tests, build-frontend]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            TARGET: x86_64-unknown-linux-musl
+    steps:
+      - uses: actions/checkout@v3
+      - name: Rust Setup
+        uses: actions-rs/toolchain@v1.0.1
+        with:
+          toolchain: stable
+          target: ${{ matrix.TARGET }}
+          override: true
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "rust-cache"
+          shared-key: "build-cross-${{ matrix.TARGET }}"
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ./ping-viewer-next-frontend/dist
+      - name: Rust Cross Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --verbose --locked --release --features 'embed-frontend blueos-extension' --target=${{ matrix.TARGET }}
+      - name: Rename
+        run: cp target/${{ matrix.TARGET }}/release/${{ github.event.repository.name }}${{ matrix.EXTENSION }} ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          path: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+      - uses: svenstaro/upload-release-action@v2
+        name: Upload binaries to release
+        if: ${{ github.event_name == 'push' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          asset_name: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          tag: ${{ github.ref }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          overwrite: true
+
+  deploy-blueos:
+    needs: [build, build-x86-musl]
+    runs-on: ubuntu-22.04
+    environment: DockerHub
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create files directory
+        run: mkdir -p ./blueos-ping-viewer-next/files/
+      - name: Download armv7 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-armv7-unknown-linux-musleabihf
+          path: ./blueos-ping-viewer-next/files/
+      - name: Download aarch64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-aarch64-unknown-linux-musl
+          path: ./blueos-ping-viewer-next/files/
+      - name: Download x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-x86_64-unknown-linux-musl
+          path: ./blueos-ping-viewer-next/files/
+      - name: Prepare binaries
+        run: |
+          cd ./blueos-ping-viewer-next/files/
+          mv ${{ github.event.repository.name }}-armv7-unknown-linux-musleabihf ping-viewer-next.armv7
+          mv ${{ github.event.repository.name }}-aarch64-unknown-linux-musl ping-viewer-next.aarch64
+          mv ${{ github.event.repository.name }}-x86_64-unknown-linux-musl ping-viewer-next.x86_64
+          chmod +x ping-viewer-next.*
+      - uses: BlueOS-community/Deploy-BlueOS-Extension@v1.2.0
+        name: Deploy BlueOS Extension
+        if: ${{ github.ref_name == env.BLUEOS_EXTENSION_BRANCH }}
+        with:
+          docker-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          docker-password: ${{ secrets.DOCKERHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          image-name: ping-viewer-next-discovery-tweak
+          author: Raul Victor Trombin
+          author-email: raulvtrombin@gmail.com
+          maintainer: Blue Robotics
+          maintainer-email: support@bluerobotics.com
+          dockerfile-location: "./blueos-ping-viewer-next"
+          skip-checkout: 'true'
+
+  publish-blueos-manifest:
+    needs: deploy-blueos
+    if: github.ref_name == 'Ping-Viewer-Next_Discovery-Tweak'
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    environment: DockerHub
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate BlueOS manifest
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: python ./scripts/generate_blueos_manifest.py
+
+      - name: Publish gh-pages content
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -eux
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          rm -rf /tmp/gh-pages
+          if git ls-remote --exit-code origin gh-pages; then
+            git fetch origin gh-pages:refs/remotes/origin/gh-pages
+            git worktree add /tmp/gh-pages origin/gh-pages
+          else
+            git worktree add -B gh-pages /tmp/gh-pages
+          fi
+
+          rm -rf /tmp/gh-pages/*
+          cp /tmp/blueos-manifest/manifest.json /tmp/gh-pages/manifest.json
+          mkdir -p /tmp/gh-pages/repos
+          cp -R ./blueos-extension-repository/repos/. /tmp/gh-pages/repos/
+
+          cd /tmp/gh-pages
+          git add manifest.json repos
+          git commit -m "Publish BlueOS manifest for ${GITHUB_REF_NAME}" || exit 0
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
+
+  build-tauri:
+    needs: quick-tests
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            label: 'Mac-ARM64'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+            label: 'Mac-x86'
+          - platform: 'ubuntu-22.04'
+            args: ''
+            label: 'Linux'
+          - platform: 'windows-latest'
+            args: ''
+            label: 'Windows'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+        # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: |
+          cd ping-viewer-next-desktop
+          bun install
+
+      - name: Build the app
+        id: tauri-build
+        uses: tauri-apps/tauri-action@v0.5.19
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: './ping-viewer-next-desktop'
+          args: ${{ matrix.args }}
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/') && format('Ping Viewer 2 qv{0}', github.ref_name) || '' }}
+          releaseDraft: false
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'ping-viewer_${{steps.tauri-build.outputs.appVersion}}_${{ matrix.label }}'
+          path: "${{ join(fromJSON(steps.tauri-build.outputs.artifactPaths), '\n') }}"
+          retention-days: 5
