@@ -56,12 +56,12 @@ def readme_text(metadata: dict, tag_name: str) -> str:
 
     if tag_name == branch_name:
         candidates = [
-            f"https://raw.githubusercontent.com/{REPOSITORY}/refs/heads/{branch_name}/{readme_path}",
+            f"https://raw.githubusercontent.com/{REPOSITORY}/{branch_name}/{readme_path}",
         ]
     else:
         candidates = [
-            f"https://raw.githubusercontent.com/{REPOSITORY}/refs/tags/{tag_name}/{readme_path}",
-            f"https://raw.githubusercontent.com/{REPOSITORY}/refs/heads/{branch_name}/{readme_path}",
+            f"https://raw.githubusercontent.com/{REPOSITORY}/{tag_name}/{readme_path}",
+            f"https://raw.githubusercontent.com/{REPOSITORY}/{branch_name}/{readme_path}",
         ]
 
     for candidate in candidates:
@@ -121,11 +121,11 @@ def build_manifest() -> list[dict]:
     metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
     docker_repo = f"{DOCKER_USERNAME}/blueos-{metadata['docker_image_name']}"
     base_url = (
-        f"https://raw.githubusercontent.com/{REPOSITORY}/refs/heads/gh-pages/"
+        f"https://raw.githubusercontent.com/{REPOSITORY}/gh-pages/"
         f"repos/{REPOSITORY_OWNER}/ping-viewer-next-discovery-tweak"
     )
     company_logo_url = (
-        f"https://raw.githubusercontent.com/{REPOSITORY}/refs/heads/gh-pages/"
+        f"https://raw.githubusercontent.com/{REPOSITORY}/gh-pages/"
         f"repos/{REPOSITORY_OWNER}/company_logo.png"
     )
 

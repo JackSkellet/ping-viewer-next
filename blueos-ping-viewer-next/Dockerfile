@@ -44,7 +44,7 @@ LABEL company='{\
   "name": "Blue Robotics",\
   "email": "support@bluerobotics.com"\
 }'
-LABEL readme="https://raw.githubusercontent.com/JackSkellet/ping-viewer-next/refs/heads/Ping-Viewer-Next_Discovery-Tweak/blueos-ping-viewer-next/README.md"
+LABEL readme="https://raw.githubusercontent.com/JackSkellet/ping-viewer-next/Ping-Viewer-Next_Discovery-Tweak/blueos-ping-viewer-next/README.md"
 LABEL type="device-integration"
 LABEL tags='[\
   "sonar",\
