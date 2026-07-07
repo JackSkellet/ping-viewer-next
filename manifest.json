@@ -1,0 +1,87 @@
+[
+  {
+    "identifier": "jackskellet.ping-viewer-next-discovery-tweak",
+    "name": "Ping Viewer 2 Discovery Tweak",
+    "website": "https://github.com/JackSkellet/ping-viewer-next/tree/Ping-Viewer-Next_Discovery-Tweak",
+    "docker": "jackskellet/blueos-ping-viewer-next-discovery-tweak",
+    "description": "Ping Viewer 2 custom BlueOS build with the Discovery Tweak branch changes.",
+    "extension_logo": "https://raw.githubusercontent.com/JackSkellet/ping-viewer-next/gh-pages/repos/jackskellet/ping-viewer-next-discovery-tweak/extension_logo.png",
+    "company_logo": "https://raw.githubusercontent.com/JackSkellet/ping-viewer-next/gh-pages/repos/jackskellet/company_logo.png",
+    "versions": {
+      "master": {
+        "identifier": "db8753c2-07a7-568b-b6f3-77b33e4543b6",
+        "type": "device-integration",
+        "website": null,
+        "images": [
+          {
+            "expanded_size": 130168745,
+            "platform": {
+              "architecture": "arm",
+              "variant": "v7",
+              "os": "linux"
+            },
+            "digest": "sha256:2a32a1c24794c0bfdb6e33f10e28534ca1814945fbdb573c42bb99643b0f5728"
+          },
+          {
+            "expanded_size": 131940556,
+            "platform": {
+              "architecture": "arm64",
+              "variant": null,
+              "os": "linux"
+            },
+            "digest": "sha256:267e4fca59732a8df2dcd2a16c4064b88961e74b36b7ea883069be64df4d1dae"
+          },
+          {
+            "expanded_size": 131790252,
+            "platform": {
+              "architecture": "amd64",
+              "variant": null,
+              "os": "linux"
+            },
+            "digest": "sha256:5eebb43628ee443b2259deccb48c767fab37890888ce13f068c37415e07cfd7e"
+          }
+        ],
+        "authors": [
+          {
+            "name": "Raul Victor Trombin",
+            "email": "raulvtrombin@gmail.com"
+          }
+        ],
+        "filter_tags": [
+          "sonar",
+          "ping-protocol",
+          "discovery"
+        ],
+        "extra_links": {},
+        "tag": "master",
+        "docs": null,
+        "readme": "# BlueOS's Ping Viewer Extension\n\n## Instructions\n\n### Manual Instalation\n\nAccess the extensions manager and install with the following parameters.\n\nFor Downloadable Extensions, use this manifest URL:\n\n```shell\nhttps://raw.githubusercontent.com/JackSkellet/ping-viewer-next/gh-pages/manifest.json\n```\n\nExtensions Manager:\n\n```shell\nblueos.local/tools/extensions-manager\n```\n\nParameters:\n\n```shell\njackskellet.ping-viewer-next-discovery-tweak\n\nPing Viewer 2 Discovery Tweak\n\nPing-Viewer-Next_Discovery-Tweak\n\n{\n  \"ExposedPorts\": {\n    \"6060/tcp\": {}\n  },\n  \"HostConfig\": {\n    \"Privileged\": true,\n    \"PortBindings\": {\n      \"6060/tcp\": [\n        {\n          \"HostPort\": \"\"\n        }\n      ]\n    },\n    \"NetworkMode\": \"host\"\n  }\n}\n```\n\n### Cockpit Widgets\n\nFor each connected ping device, provides a widget accessible through Cockpit as an\n[Automatic External Iframe](https://blueos.cloud/cockpit/docs/latest/usage/advanced/#automatic-external-iframes).\n\nRequires BlueOS >= 1.4.\n",
+        "support": "https://github.com/JackSkellet/ping-viewer-next/issues",
+        "requirements": null,
+        "company": {
+          "about": "Custom BlueOS build of Ping Viewer 2 for the Discovery Tweak branch.",
+          "name": "JackSkellet",
+          "email": null
+        },
+        "permissions": {
+          "ExposedPorts": {
+            "6060/tcp": {}
+          },
+          "HostConfig": {
+            "Privileged": true,
+            "NetworkMode": "host",
+            "Binds": [
+              "/var/logs/blueos/extensions/ping-viewer-next-discovery-tweak:/app/logs",
+              "/usr/blueos/extensions/ping-viewer-next-discovery-tweak/recordings:/app/recordings"
+            ]
+          }
+        }
+      }
+    },
+    "repo_info": {
+      "downloads": 0,
+      "last_updated": "2026-07-07T17:25:36.490271Z",
+      "date_registered": "2026-07-07T17:25:36.490271Z"
+    }
+  }
+]
