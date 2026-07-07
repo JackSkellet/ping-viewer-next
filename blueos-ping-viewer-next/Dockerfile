@@ -28,8 +28,8 @@ LABEL permissions='{\
     "Privileged": true,\
     "NetworkMode": "host",\
     "Binds": [\
-       "/var/logs/blueos/extensions/ping-viewer-next:/app/logs",\
-       "/usr/blueos/extensions/ping-viewer-next/recordings:/app/recordings"\
+        "/var/logs/blueos/extensions/ping-viewer-next-discovery-tweak:/app/logs",\
+        "/usr/blueos/extensions/ping-viewer-next-discovery-tweak/recordings:/app/recordings"\
     ]\
   }\
 }'
@@ -44,7 +44,7 @@ LABEL company='{\
   "name": "Blue Robotics",\
   "email": "support@bluerobotics.com"\
 }'
-LABEL readme="https://raw.githubusercontent.com/bluerobotics/ping-viewer-next/refs/heads/master/blueos-ping-viewer-next/README.md"
+LABEL readme="https://raw.githubusercontent.com/JackSkellet/ping-viewer-next/refs/heads/Ping-Viewer-Next_Discovery-Tweak/blueos-ping-viewer-next/README.md"
 LABEL type="device-integration"
 LABEL tags='[\
   "sonar",\

@@ -307,13 +307,13 @@ pub struct CockpitWidget {
 impl Default for ServerMetadata {
     fn default() -> Self {
         Self {
-            name: "Ping Viewer",
-            description: "A ping protocol extension for expose devices to web.",
+            name: "Ping Viewer 2 Discovery Tweak",
+            description: "Custom Ping Viewer 2 BlueOS extension with the Discovery Tweak branch changes.",
             icon: "mdi-compass-outline",
-            company: "BlueRobotics",
+            company: "JackSkellet",
             version: "0.0.0",
             new_page: true,
-            webpage: "https://github.com/RaulTrombin/navigator-assistant",
+            webpage: "https://github.com/JackSkellet/ping-viewer-next/tree/Ping-Viewer-Next_Discovery-Tweak",
             api: "/docs",
             extras: Extras {
                 cockpit: "/cockpit_extras.json",
