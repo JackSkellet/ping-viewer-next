@@ -35,6 +35,7 @@ struct Args {
     log_include_all_dependencies: bool,
 
     /// Turns on the Tracy tool integration.
+    #[cfg(feature = "tracy")]
     #[arg(long)]
     enable_tracy: bool,
 
@@ -79,7 +80,14 @@ pub fn is_tracing() -> bool {
 }
 
 pub fn is_tracy() -> bool {
-    MANAGER.clap_matches.enable_tracy
+    #[cfg(feature = "tracy")]
+    {
+        MANAGER.clap_matches.enable_tracy
+    }
+    #[cfg(not(feature = "tracy"))]
+    {
+        false
+    }
 }
 
 pub fn is_log_all_dependencies() -> bool {

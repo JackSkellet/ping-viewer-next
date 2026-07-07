@@ -64,6 +64,7 @@ pub fn init() {
         .with(file_layer);
 
     // Configure the default subscriber
+    #[cfg(feature = "tracy")]
     match (
         cli::manager::is_tracy(),
         cli::manager::is_log_all_dependencies(),
@@ -94,6 +95,23 @@ pub fn init() {
                 .expect("Unable to set a global subscriber");
         }
         (false, true) => {
+            let subscriber = subscriber.with(EnvFilter::new(&level));
+            tracing::subscriber::set_global_default(subscriber)
+                .expect("Unable to set a global subscriber");
+        }
+    };
+
+    #[cfg(not(feature = "tracy"))]
+    match cli::manager::is_log_all_dependencies() {
+        false => {
+            let lib_name = env!("CARGO_PKG_NAME").replace('-', "_");
+            let subscriber = subscriber.with(EnvFilter::new(format!(
+                "{lib_name}={level},lib{lib_name}={level}"
+            )));
+            tracing::subscriber::set_global_default(subscriber)
+                .expect("Unable to set a global subscriber");
+        }
+        true => {
             let subscriber = subscriber.with(EnvFilter::new(&level));
             tracing::subscriber::set_global_default(subscriber)
                 .expect("Unable to set a global subscriber");
