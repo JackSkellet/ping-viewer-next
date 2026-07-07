@@ -230,7 +230,7 @@ jobs:
           chmod +x ping-viewer-next.*
       - uses: BlueOS-community/Deploy-BlueOS-Extension@v1.2.0
         name: Deploy BlueOS Extension
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/Ping-Viewer-Next_Discovery-Tweak' || startsWith(github.ref, 'refs/tags/'))
+        if: github.event_name == 'push' && github.ref == 'refs/heads/Ping-Viewer-Next_Discovery-Tweak'
         with:
           docker-username: ${{ secrets.DOCKER_USERNAME }}
           docker-password: ${{ secrets.DOCKER_PASSWORD }}
@@ -245,7 +245,7 @@ jobs:
 
   publish-blueos-manifest:
     needs: deploy-blueos
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/Ping-Viewer-Next_Discovery-Tweak' || startsWith(github.ref, 'refs/tags/'))
+    if: github.event_name == 'push' && github.ref == 'refs/heads/Ping-Viewer-Next_Discovery-Tweak'
     permissions:
       contents: write
     runs-on: ubuntu-22.04
