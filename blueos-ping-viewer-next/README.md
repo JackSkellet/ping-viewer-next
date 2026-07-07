@@ -4,7 +4,13 @@
 
 ### Manual Instalation
 
-Access the extensions manager and install with the following parameters:
+Access the extensions manager and install with the following parameters.
+
+For Downloadable Extensions, use this manifest URL:
+
+```shell
+https://raw.githubusercontent.com/JackSkellet/ping-viewer-next/gh-pages/manifest.json
+```
 
 Extensions Manager:
 
@@ -15,11 +21,11 @@ blueos.local/tools/extensions-manager
 Parameters:
 
 ```shell
-bluerobotics.ping-viewer-next
+jackskellet.ping-viewer-next-discovery-tweak
 
-Ping Viewer
+Ping Viewer 2 Discovery Tweak
 
-1.0.0-beta.6
+Ping-Viewer-Next_Discovery-Tweak
 
 {
   "ExposedPorts": {

@@ -2,6 +2,9 @@ name: Test all targets
 
 on: [push, pull_request]
 
+env:
+  BLUEOS_EXTENSION_BRANCH: Ping-Viewer-Next_Discovery-Tweak
+
 permissions:
   contents: write
 
@@ -230,18 +233,63 @@ jobs:
           chmod +x ping-viewer-next.*
       - uses: BlueOS-community/Deploy-BlueOS-Extension@v1.2.0
         name: Deploy BlueOS Extension
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref == format('refs/heads/{0}', env.BLUEOS_EXTENSION_BRANCH)
         with:
           docker-username: ${{ secrets.DOCKER_USERNAME }}
           docker-password: ${{ secrets.DOCKER_PASSWORD }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          image-name: ping-viewer-next
+          image-name: ping-viewer-next-discovery-tweak
           author: Raul Victor Trombin
           author-email: raulvtrombin@gmail.com
           maintainer: Blue Robotics
           maintainer-email: support@bluerobotics.com
           dockerfile-location: "./blueos-ping-viewer-next"
           skip-checkout: 'true'
+
+  publish-blueos-manifest:
+    needs: deploy-blueos
+    if: github.ref == format('refs/heads/{0}', env.BLUEOS_EXTENSION_BRANCH)
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate BlueOS manifest
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: python ./scripts/generate_blueos_manifest.py
+
+      - name: Publish gh-pages content
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -eux
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          rm -rf /tmp/gh-pages
+          if git ls-remote --exit-code origin gh-pages; then
+            git fetch origin gh-pages:refs/remotes/origin/gh-pages
+            git worktree add /tmp/gh-pages origin/gh-pages
+          else
+            git worktree add -B gh-pages /tmp/gh-pages
+          fi
+
+          rm -rf /tmp/gh-pages/*
+          cp /tmp/blueos-manifest/manifest.json /tmp/gh-pages/manifest.json
+          mkdir -p /tmp/gh-pages/repos
+          cp -R ./blueos-extension-repository/repos/. /tmp/gh-pages/repos/
+
+          cd /tmp/gh-pages
+          git add manifest.json repos
+          git commit -m "Publish BlueOS manifest for ${GITHUB_REF_NAME}" || exit 0
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
 
   build-tauri:
     needs: quick-tests

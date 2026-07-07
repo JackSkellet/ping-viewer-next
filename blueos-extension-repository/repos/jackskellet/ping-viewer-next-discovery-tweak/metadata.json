@@ -1,0 +1,43 @@
+{
+  "identifier": "jackskellet.ping-viewer-next-discovery-tweak",
+  "name": "Ping Viewer 2 Discovery Tweak",
+  "website": "https://github.com/JackSkellet/ping-viewer-next/tree/Ping-Viewer-Next_Discovery-Tweak",
+  "docker_image_name": "ping-viewer-next-discovery-tweak",
+  "description": "Ping Viewer 2 custom BlueOS build with the Discovery Tweak branch changes.",
+  "type": "device-integration",
+  "authors": [
+    {
+      "name": "Raul Victor Trombin",
+      "email": "raulvtrombin@gmail.com"
+    }
+  ],
+  "company": {
+    "about": "Custom BlueOS build of Ping Viewer 2 for the Discovery Tweak branch.",
+    "name": "JackSkellet",
+    "email": null
+  },
+  "filter_tags": [
+    "sonar",
+    "ping-protocol",
+    "discovery"
+  ],
+  "extra_links": {},
+  "support": "https://github.com/JackSkellet/ping-viewer-next/issues",
+  "requirements": null,
+  "docs": null,
+  "readme_path": "blueos-ping-viewer-next/README.md",
+  "branch_name": "Ping-Viewer-Next_Discovery-Tweak",
+  "permissions": {
+    "ExposedPorts": {
+      "6060/tcp": {}
+    },
+    "HostConfig": {
+      "Privileged": true,
+      "NetworkMode": "host",
+      "Binds": [
+        "/var/logs/blueos/extensions/ping-viewer-next-discovery-tweak:/app/logs",
+        "/usr/blueos/extensions/ping-viewer-next-discovery-tweak/recordings:/app/recordings"
+      ]
+    }
+  }
+}
