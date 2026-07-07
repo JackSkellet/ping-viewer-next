@@ -249,7 +249,7 @@ jobs:
 
   publish-blueos-manifest:
     needs: deploy-blueos
-    if: github.ref_name == 'Ping-Viewer-Next_Discovery-Tweak'
+    if: github.ref_name == 'Ping-Viewer-Next_Discovery-Tweak' || github.ref_name == 'master'
     permissions:
       contents: write
     runs-on: ubuntu-22.04
