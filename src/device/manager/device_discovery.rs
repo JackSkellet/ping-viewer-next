@@ -176,12 +176,35 @@ pub fn network_discovery() -> Option<Vec<SourceSelection>> {
     Some(available_sources)
 }
 
+/// Resolves the BlueOS host from an optional environment variable value.
+/// Returns the provided value when it is `Some` and non-empty,
+/// otherwise falls back to the standard BlueOS IP `192.168.2.2`.
+#[cfg(feature = "blueos-extension")]
+fn resolve_blueos_host(env_val: Option<&str>) -> &str {
+    match env_val {
+        Some(host) if !host.is_empty() => host,
+        _ => "192.168.2.2",
+    }
+}
+
+/// Returns the BlueOS host to use for ping discovery.
+/// Reads the `BLUEOS_HOST` environment variable if set and non-empty,
+/// otherwise falls back to the standard BlueOS IP `192.168.2.2`.
+#[cfg(feature = "blueos-extension")]
+fn blueos_host() -> String {
+    let env_val = std::env::var("BLUEOS_HOST");
+    resolve_blueos_host(env_val.as_deref().ok()).to_string()
+}
+
 // Discovery function that uses BlueOS's ping service to find current bridged devices
 #[cfg(feature = "blueos-extension")]
 pub async fn blueos_ping_discovery() -> Option<BluePingDiscoveryResult> {
+    let host = blueos_host();
+    let sensors_url = format!("http://{}:9110/v1.0/sensors", host);
+
     let client = reqwest::Client::new();
     let response = match client
-        .get("http://localhost:9110/v1.0/sensors")
+        .get(&sensors_url)
         .header("accept", "application/json")
         .timeout(Duration::from_millis(500))
         .send()
@@ -189,7 +212,7 @@ pub async fn blueos_ping_discovery() -> Option<BluePingDiscoveryResult> {
     {
         Ok(response) => response,
         Err(err) => {
-            warn!("blue_ping_discovery: Failed to connect to Ping service: {err}");
+            warn!("blue_ping_discovery: Failed to connect to Ping service at {sensors_url}: {err}");
             return None;
         }
     };
@@ -515,6 +538,31 @@ pub async fn set_baudrate_pre_routine(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "blueos-extension")]
+    mod blueos_host_tests {
+        use super::*;
+
+        #[test]
+        fn test_resolve_blueos_host_default_when_none() {
+            assert_eq!(resolve_blueos_host(None), "192.168.2.2");
+        }
+
+        #[test]
+        fn test_resolve_blueos_host_default_when_empty() {
+            assert_eq!(resolve_blueos_host(Some("")), "192.168.2.2");
+        }
+
+        #[test]
+        fn test_resolve_blueos_host_custom_ip() {
+            assert_eq!(resolve_blueos_host(Some("10.0.0.1")), "10.0.0.1");
+        }
+
+        #[test]
+        fn test_resolve_blueos_host_localhost() {
+            assert_eq!(resolve_blueos_host(Some("localhost")), "localhost");
+        }
+    }
 
     #[test]
     fn test_discovery_response_parsing() {
